@@ -1,0 +1,73 @@
+name: PDFMate CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pdfmate-${{ runner.os }}-${{ hashFiles('requirements*.txt') }}
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Lint
+        run: |
+          ruff check src/ --output-format=github
+          ruff format --check src/
+      - name: Type Check
+        run: mypy src/ --ignore-missing-imports --strict
+      - name: Security Audit
+        run: bandit -r src/ -f json -o bandit.json || true
+      - name: Unit Tests
+        run: pytest -q --cov=src --cov-report=xml --cov-fail-under=80
+
+  build-and-smoke:
+    needs: quality
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Images
+        run: docker-compose -f docker/docker-compose.yml build
+      - name: Integration Smoke
+        run: |
+          docker-compose -f docker/docker-compose.yml up -d redis agent
+          sleep 10
+          python tests/integration/smoke_offline_agent.py
+          docker-compose -f docker/docker-compose.yml down
+      - name: Artifact Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            bandit.json
+            coverage.xml
+
+  deploy-staging:
+    needs: build-and-smoke
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://pdfmate-staging.local
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Compose Stack
+        run: |
+          cp .env.staging .env
+          docker-compose -f docker/docker-compose.yml up -d --force-recreate
+

@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.agent
+      target: runtime
+    container_name: pdfmate_agent
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    volumes:
+      - ../vault:/app/vault:rw
+      - ../models:/app/models:ro
+      - ../logs:/app/logs
+    environment:
+      - LLM_MODEL_PATH=/app/models/qwen2.5-7b-instruct-q4_k_m.gguf
+      - VLM_MODEL_PATH=/app/models/qwen2-vl-7b-instruct-q4_k_m.gguf
+      - GPU_MAX_VRAM=7.5
+      - REDIS_URL=redis://redis:6379/0
+    networks:
+      - pdfmate-net
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ui
+    container_name: pdfmate_ui
+    ports:
+      - "8501:8501"
+    environment:
+      - AGENT_URL=http://agent:8000
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - agent
+      - redis
+    networks:
+      - pdfmate-net
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.agent
+    container_name: pdfmate_worker
+    command: ["celery", "-A", "pdfmate.application.worker", "worker", "--loglevel=info", "--concurrency=4"]
+    deploy:
+      replicas: 2
+    volumes:
+      - ../vault:/app/vault:rw
+      - ../models:/app/models:ro
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - GPU_MAX_VRAM=0.0
+    depends_on:
+      - redis
+    networks:
+      - pdfmate-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: pdfmate_redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - pdfmate-net
+    restart: unless-stopped
+
+networks:
+  pdfmate-net:
+    driver: bridge
+    internal: true
+
+volumes:
+  redis-data:
+    driver: local
+  vault-data:
+    driver: local
+

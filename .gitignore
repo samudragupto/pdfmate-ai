@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Models (large binary files)
+models/*.gguf
+models/*.bin
+models/*.safetensors
+
+# Vault and logs
+vault/
+logs/
+*.log
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+bandit.json
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# Demo assets (regenerable)
+demo_assets/
+
+# Environment files
+.env
+.env.local
+.env.staging
+.env.production
+
+# Docker
+docker/vault/
+docker/logs/
+
+# llama.cpp build artifacts
+build/
+*.o
+*.obj
+
+# Local runtime config overrides
+config/

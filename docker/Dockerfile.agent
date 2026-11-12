@@ -1,0 +1,31 @@
+# Multi-stage build for minimal footprint and GPU runtime support
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Runtime stage with CUDA support for local LLM inference
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS runtime
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app/src
+ENV CUDA_VISIBLE_DEVICES=0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip \
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender-dev \
+    libgomp1 libopenblas-base && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /root/.local /usr/local
+COPY src/ ./src/
+COPY config/ ./config/
+COPY models/ ./models/
+
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
+CMD ["python3", "-m", "uvicorn", "pdfmate.interfaces.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
