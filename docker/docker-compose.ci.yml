@@ -1,17 +1,15 @@
 services:
   agent:
-    deploy:
-      resources:
-        reservations: null
-    networks:
+    deploy: !reset null
+    networks: !reset
       - default
   redis:
-    networks:
+    networks: !reset
       - default
   ui:
-    networks:
+    networks: !reset
       - default
   worker:
-    networks:
+    deploy: !reset null
+    networks: !reset
       - default
-

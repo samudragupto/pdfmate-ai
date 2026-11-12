@@ -48,7 +48,6 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.agent
-    container_name: pdfmate_worker
     command: ["celery", "-A", "pdfmate.application.worker", "worker", "--loglevel=info", "--concurrency=4"]
     deploy:
       replicas: 2
