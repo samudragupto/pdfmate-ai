@@ -76,4 +76,4 @@ build/
 *.obj
 
 # Local runtime config overrides
-config/
+/config/
