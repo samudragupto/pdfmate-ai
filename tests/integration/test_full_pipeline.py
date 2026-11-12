@@ -16,9 +16,23 @@ from pdfmate.infrastructure.sandbox.secure_executor import EncryptedSandbox
 
 @pytest.fixture
 def demo_pdfs() -> list[Path]:
-    """Point to the 4 demo PDFs."""
+    """Point to the 4 demo PDFs, generating them if absent in CI."""
     base = Path(__file__).resolve().parent.parent.parent / "demo_assets"
-    return sorted(base.glob("note_*.pdf"))
+    base.mkdir(parents=True, exist_ok=True)
+    existing = sorted(base.glob("note_*.pdf"))
+    if len(existing) < 4:
+        import fitz
+
+        for idx in range(1, 5):
+            pdf_path = base / f"note_{idx}.pdf"
+            doc = fitz.open()
+            page = doc.new_page(width=595, height=842)
+            page.insert_text((72, 72), f"Module {idx}: Lecture Notes", fontsize=18)
+            page.insert_text((400, 800), "Student ID: 2026-0042-XYZ", fontsize=9)
+            doc.save(str(pdf_path))
+            doc.close()
+        existing = sorted(base.glob("note_*.pdf"))
+    return existing
 
 
 @pytest.fixture

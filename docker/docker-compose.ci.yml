@@ -1,0 +1,17 @@
+services:
+  agent:
+    deploy:
+      resources:
+        reservations: null
+    networks:
+      - default
+  redis:
+    networks:
+      - default
+  ui:
+    networks:
+      - default
+  worker:
+    networks:
+      - default
+

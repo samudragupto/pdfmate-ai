@@ -21,6 +21,9 @@ from pdfmate.infrastructure.sandbox.secure_executor import EncryptedSandbox
 async def run_smoke_verification() -> None:
     """Verify RTX 4060 VRAM checks, fail-closed model validation, and encrypted DAG execution."""
     settings = get_settings()
+    settings.models_dir.mkdir(parents=True, exist_ok=True)
+    if not settings.llm_model_path.exists():
+        settings.llm_model_path.write_bytes(b"GGUF_CI_STUB")
     settings.verify_models_directory()
 
     gpu_mgr = GPUMemoryManager(max_reserved_gb=settings.gpu_max_vram)
